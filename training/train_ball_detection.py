@@ -117,6 +117,40 @@ def train_ball_detection(
     Train ball detection model optimized for small object detection.
     """
     
+    # Check GPU availability and configure device
+    if torch.cuda.is_available():
+        gpu_count = torch.cuda.device_count()
+        print(f"\n{'='*60}")
+        print(f"GPU Configuration")
+        print(f"{'='*60}")
+        print(f"CUDA available: ✓")
+        print(f"GPU count: {gpu_count}")
+        for i in range(gpu_count):
+            gpu_name = torch.cuda.get_device_name(i)
+            gpu_memory = torch.cuda.get_device_properties(i).total_memory / 1024**3
+            print(f"GPU {i}: {gpu_name} ({gpu_memory:.1f} GB)")
+        
+        # Ensure device is properly formatted
+        if isinstance(device, list):
+            # Validate GPU IDs
+            device = [d for d in device if d < gpu_count]
+            if not device:
+                print(f"⚠️  Warning: No valid GPU IDs in {device}, using GPU 0")
+                device = 0
+            elif len(device) == 1:
+                device = device[0]  # YOLO accepts single int or list
+        elif isinstance(device, int):
+            if device >= gpu_count:
+                print(f"⚠️  Warning: GPU {device} not available, using GPU 0")
+                device = 0
+        print(f"Using device: {device}")
+        print(f"{'='*60}\n")
+    else:
+        print(f"\n{'='*60}")
+        print(f"⚠️  WARNING: CUDA not available! Training will use CPU (very slow)")
+        print(f"{'='*60}\n")
+        device = 'cpu'
+    
     if use_wandb:
         wandb.init(
             project=project_name,
@@ -187,8 +221,13 @@ def train_ball_detection(
     
     print("Starting ball detection model training...")
     print(f"Training configuration:")
+    print(f"  Device: {device} (type: {type(device).__name__})")
+    print(f"  CUDA available: {torch.cuda.is_available()}")
+    if torch.cuda.is_available():
+        print(f"  Current CUDA device: {torch.cuda.current_device()}")
     for key, value in training_args.items():
-        print(f"  {key}: {value}")
+        if key != 'device':  # Already printed above
+            print(f"  {key}: {value}")
     
     results = model.train(**training_args)
     
