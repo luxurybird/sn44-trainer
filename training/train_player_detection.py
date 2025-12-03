@@ -22,13 +22,12 @@ def create_dataset_yaml(dataset_path: str, output_path: str = "dataset.yaml"):
         dataset_name = dataset_path_obj.name if dataset_path_obj.name else 'soccernet_yolo'
         possible_paths = [
             dataset_path_obj,
-            Path('/workspace/sn44-trainer/datasets') / dataset_name,
-            Path('/workspace/sn44-trainer/datasets'),
             Path('/workspace/sn44-trainer') / dataset_name,
+            Path('/workspace/sn44-trainer') / 'soccernet_yolo',
             Path('/workspace/sn44-trainer'),
             Path.cwd() / dataset_name,
-            Path.cwd() / 'datasets' / dataset_name,
-            Path.cwd() / 'datasets',
+            Path.cwd() / 'soccernet_yolo',
+            Path.cwd(),
         ]
         
         found_path = None
@@ -50,34 +49,42 @@ def create_dataset_yaml(dataset_path: str, output_path: str = "dataset.yaml"):
                 has_images = "✓" if (p.exists() and (p / 'images').exists()) else "✗"
                 error_msg += f"  {exists} {has_images} {p}\n"
             error_msg += (
-                f"\nPlease ensure the dataset directory exists and contains 'images/train' and 'images/val' subdirectories.\n"
-                f"Note: Dataset download directory is '/workspace/sn44-trainer/datasets'. "
-                f"You can update this in '/tmp/Ultralytics/settings.json'"
+                f"\nPlease ensure the dataset directory exists and contains 'images/train' subdirectory.\n"
+                f"Expected location: /workspace/sn44-trainer/soccernet_yolo or current directory"
             )
             raise FileNotFoundError(error_msg)
         dataset_path_obj = found_path
     
     # Verify required subdirectories exist
-    required_dirs = ['images/train', 'images/val']
-    missing_dirs = []
-    for subdir in required_dirs:
-        if not (dataset_path_obj / subdir).exists():
-            missing_dirs.append(str(dataset_path_obj / subdir))
+    train_dir = dataset_path_obj / 'images' / 'train'
+    val_dir = dataset_path_obj / 'images' / 'val'
+    test_dir = dataset_path_obj / 'images' / 'test'
     
-    if missing_dirs:
+    if not train_dir.exists():
         raise FileNotFoundError(
-            f"Required dataset directories not found:\n" + 
-            "\n".join(f"  - {d}" for d in missing_dirs) +
-            f"\n\nDataset path: {dataset_path_obj}\n"
-            f"Please ensure the dataset is properly organized with 'images/train' and 'images/val' subdirectories."
+            f"Required dataset directory not found: {train_dir}\n"
+            f"Dataset path: {dataset_path_obj}\n"
+            f"Please ensure the dataset contains 'images/train' subdirectory."
         )
+    
+    # Handle missing val directory - use train for validation if val doesn't exist
+    val_path = 'images/val'
+    if not val_dir.exists():
+        print(f"⚠️  Warning: Validation directory not found: {val_dir}")
+        print(f"   Using training set for validation (not ideal but will work)")
+        val_path = 'images/train'  # Use train for val if val doesn't exist
+    
+    # Handle missing test directory - use val (or train) for test if test doesn't exist
+    test_path = 'images/test'
+    if not test_dir.exists():
+        test_path = val_path if val_dir.exists() else 'images/train'
     
     # Create config with resolved absolute path
     config = {
         'path': str(dataset_path_obj),
         'train': 'images/train',
-        'val': 'images/val',
-        'test': 'images/test',
+        'val': val_path,
+        'test': test_path,
         'nc': 4,
         'names': {
             0: 'ball',
@@ -93,7 +100,9 @@ def create_dataset_yaml(dataset_path: str, output_path: str = "dataset.yaml"):
     print(f"Created dataset config: {output_path}")
     print(f"Dataset path: {dataset_path_obj}")
     print(f"Train images: {dataset_path_obj / 'images/train'}")
-    print(f"Val images: {dataset_path_obj / 'images/val'}")
+    print(f"Val images: {dataset_path_obj / val_path}")
+    if test_path != 'images/test' or not test_dir.exists():
+        print(f"Test images: {dataset_path_obj / test_path} (using {'val' if val_dir.exists() else 'train'} set)")
     return output_path
 
 def train_player_detection(
