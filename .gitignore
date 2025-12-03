@@ -1,0 +1,43 @@
+# Dataset directories
+soccernet_data/
+soccernet_yolo/
+models/
+
+# Training outputs
+sn44-training/
+runs/
+*.pt
+*.pth
+*.onnx
+
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+env/
+venv/
+.venv/
+
+# Jupyter
+.ipynb_checkpoints/
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Logs
+*.log
+wandb/
+
+# Checkpoints
+checkpoints/
+weights/
+
