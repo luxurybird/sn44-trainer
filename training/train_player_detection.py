@@ -11,8 +11,70 @@ import yaml
 
 def create_dataset_yaml(dataset_path: str, output_path: str = "dataset.yaml"):
     """Create YOLO dataset configuration file."""
+    dataset_path_obj = Path(dataset_path)
+    
+    # Resolve the path - handle both absolute and relative paths
+    dataset_path_obj = dataset_path_obj.resolve()
+    
+    # Verify the dataset directory exists
+    if not dataset_path_obj.exists() or not (dataset_path_obj / 'images').exists():
+        # Try common alternative locations
+        dataset_name = dataset_path_obj.name if dataset_path_obj.name else 'soccernet_yolo'
+        possible_paths = [
+            dataset_path_obj,
+            Path('/workspace/sn44-trainer/datasets') / dataset_name,
+            Path('/workspace/sn44-trainer/datasets'),
+            Path('/workspace/sn44-trainer') / dataset_name,
+            Path('/workspace/sn44-trainer'),
+            Path.cwd() / dataset_name,
+            Path.cwd() / 'datasets' / dataset_name,
+            Path.cwd() / 'datasets',
+        ]
+        
+        found_path = None
+        for path in possible_paths:
+            if path.exists() and (path / 'images').exists():
+                # Verify it has the required subdirectories
+                if (path / 'images' / 'train').exists() or (path / 'images' / 'val').exists():
+                    found_path = path
+                    print(f"Found dataset at alternative location: {found_path}")
+                    break
+        
+        if found_path is None:
+            error_msg = (
+                f"Dataset directory not found: {dataset_path_obj}\n"
+                f"Checked paths:\n"
+            )
+            for p in possible_paths:
+                exists = "✓" if p.exists() else "✗"
+                has_images = "✓" if (p.exists() and (p / 'images').exists()) else "✗"
+                error_msg += f"  {exists} {has_images} {p}\n"
+            error_msg += (
+                f"\nPlease ensure the dataset directory exists and contains 'images/train' and 'images/val' subdirectories.\n"
+                f"Note: Dataset download directory is '/workspace/sn44-trainer/datasets'. "
+                f"You can update this in '/tmp/Ultralytics/settings.json'"
+            )
+            raise FileNotFoundError(error_msg)
+        dataset_path_obj = found_path
+    
+    # Verify required subdirectories exist
+    required_dirs = ['images/train', 'images/val']
+    missing_dirs = []
+    for subdir in required_dirs:
+        if not (dataset_path_obj / subdir).exists():
+            missing_dirs.append(str(dataset_path_obj / subdir))
+    
+    if missing_dirs:
+        raise FileNotFoundError(
+            f"Required dataset directories not found:\n" + 
+            "\n".join(f"  - {d}" for d in missing_dirs) +
+            f"\n\nDataset path: {dataset_path_obj}\n"
+            f"Please ensure the dataset is properly organized with 'images/train' and 'images/val' subdirectories."
+        )
+    
+    # Create config with resolved absolute path
     config = {
-        'path': str(Path(dataset_path).absolute()),
+        'path': str(dataset_path_obj),
         'train': 'images/train',
         'val': 'images/val',
         'test': 'images/test',
@@ -29,6 +91,9 @@ def create_dataset_yaml(dataset_path: str, output_path: str = "dataset.yaml"):
         yaml.dump(config, f, default_flow_style=False)
     
     print(f"Created dataset config: {output_path}")
+    print(f"Dataset path: {dataset_path_obj}")
+    print(f"Train images: {dataset_path_obj / 'images/train'}")
+    print(f"Val images: {dataset_path_obj / 'images/val'}")
     return output_path
 
 def train_player_detection(
