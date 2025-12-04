@@ -3,11 +3,18 @@ Training script for Subnet 44 Pitch Keypoint Detection Model
 Detects 32 keypoints representing pitch lines
 """
 
+import warnings
+import os
 import torch
 from ultralytics import YOLO
 import wandb
 from pathlib import Path
 import yaml
+
+# Suppress NNPACK warning (harmless - we use GPU, not CPU optimizations)
+os.environ['PYTHONWARNINGS'] = 'ignore::UserWarning'
+warnings.filterwarnings('ignore', message='.*NNPACK.*')
+warnings.filterwarnings('ignore', category=UserWarning, module='torch')
 
 def create_keypoint_dataset_yaml(dataset_path: str, output_path: str = "pitch_keypoints.yaml"):
     """Create YOLO pose/keypoint dataset configuration file."""

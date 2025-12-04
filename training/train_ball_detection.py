@@ -3,11 +3,18 @@ Training script for Subnet 44 Ball Detection Model
 Specialized for small object detection
 """
 
+import warnings
+import os
 import torch
 from ultralytics import YOLO
 import wandb
 from pathlib import Path
 import yaml
+
+# Suppress NNPACK warning (harmless - we use GPU, not CPU optimizations)
+os.environ['PYTHONWARNINGS'] = 'ignore::UserWarning'
+warnings.filterwarnings('ignore', message='.*NNPACK.*')
+warnings.filterwarnings('ignore', category=UserWarning, module='torch')
 
 def create_ball_dataset_yaml(dataset_path: str, output_path: str = "ball_detection.yaml"):
     """Create YOLO dataset configuration for ball detection."""

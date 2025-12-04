@@ -3,11 +3,18 @@ Training script for Subnet 44 Player/Goalkeeper/Referee Detection Model
 Optimized for maximum accuracy with GPU resources
 """
 
+import warnings
+import os
 import torch
 from ultralytics import YOLO
 import wandb
 from pathlib import Path
 import yaml
+
+# Suppress NNPACK warning (harmless - we use GPU, not CPU optimizations)
+os.environ['PYTHONWARNINGS'] = 'ignore::UserWarning'
+warnings.filterwarnings('ignore', message='.*NNPACK.*')
+warnings.filterwarnings('ignore', category=UserWarning, module='torch')
 
 def create_dataset_yaml(dataset_path: str, output_path: str = "dataset.yaml"):
     """Create YOLO dataset configuration file."""
